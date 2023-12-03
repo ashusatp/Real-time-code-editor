@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from "react";
-// import cm from "codemirror";
-// import "codemirror/lib/codemirror.css";
 import { useRef } from "react";
-// import "codemirror/theme/dracula.css";
-// import "codemirror/mode/javascript/javascript";
-// import "codemirror/addon/edit/closetag";
-// import "codemirror/addon/edit/closebrackets";
 import ACTIONS from "../Action";
 import { basicSetup } from "codemirror";
 import { EditorView, keymap } from "@codemirror/view";
@@ -14,51 +8,15 @@ import { Compartment, EditorState } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 
-const Editor = ({ socketRef, roomId }) => {
-  // const effectRan = useRef(false);
-  // const editorRef = useRef(null);
-
-  // useEffect(() => {
-  //   if (effectRan.current === false) {
-  //     async function init() {
-  //       editorRef.current = cm.fromTextArea(
-  //         document.getElementById("realtimeEditor"),
-  //         {
-  //           mode: { name: "javascript", json: true },
-  //           theme: "dracula",
-  //           autoCloseTags: true,
-  //           autoCloseBrackets: true,
-  //           lineNumbers: true,
-  //         }
-  //       );
-
-  //       editorRef.current.on("change", (instance, changes) => {
-  //         const { origin } = changes;
-  //         const code = instance.getValue();
-  //         if (origin !== "setValue") {
-  //           socketRef.current.emit(ACTIONS.CODE_CHANGE, {
-  //             roomId,
-  //             code,
-  //           });
-  //         }
-  //       });
-  //       // editorRef.current.setValue(`console.log("hi)`)
-  //     }
-
-  //     return () => {
-  //       init();
-  //       effectRan.current = true;
-  //     };
-  //   }
-  // }, []);
-
+const Editor = ({ socketRef, roomId, onCodeChange }) => {
   const editor = useRef();
   const codeMirrorRef = useRef();
 
+  
   const updateValue = EditorView.updateListener.of(function (e) {
-    // console.log(e.selectionSet);
     if (e.selectionSet) {
       const code = e.state.doc.toString();
+      onCodeChange(code);
       socketRef.current.emit(ACTIONS.CODE_CHANGE, {
         roomId,
         code,
@@ -69,14 +27,23 @@ const Editor = ({ socketRef, roomId }) => {
   useEffect(() => {
     if (socketRef.current) {
       socketRef.current.on(ACTIONS.CODE_CHANGE, ({ code }) => {
-        console.log(code);
         if (code !== null) {
+          onCodeChange(code);
           codeMirrorRef.current.dispatch({
-            changes: {from: 0, to: codeMirrorRef.current.state.doc.length, insert: code}
+            changes: {
+              from: 0,
+              to: codeMirrorRef.current.state.doc.length,
+              insert: code,
+            },
           });
         }
       });
     }
+
+    return () => {
+      socketRef.current.off(ACTIONS.CODE_CHANGE);
+    };
+
   }, [socketRef.current]);
 
   useEffect(() => {
